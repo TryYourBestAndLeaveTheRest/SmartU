@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { ScrollView, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Dropdown } from '@/components/dropdown';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
 type ConverterCategory = 'Length' | 'Temperature' | 'Weight' | 'Currency';
@@ -44,8 +45,8 @@ function convertTemperature(value: number, fromUnit: string, toUnit: string) {
     fromUnit === 'Celsius'
       ? value
       : fromUnit === 'Fahrenheit'
-        ? ((value - 32) * 5) / 9
-        : value - 273.15;
+      ? ((value - 32) * 5) / 9
+      : value - 273.15;
 
   if (toUnit === 'Celsius') {
     return celsius;
@@ -58,7 +59,12 @@ function convertTemperature(value: number, fromUnit: string, toUnit: string) {
   return celsius + 273.15;
 }
 
-function convertValue(category: ConverterCategory, value: number, fromUnit: string, toUnit: string) {
+function convertValue(
+  category: ConverterCategory,
+  value: number,
+  fromUnit: string,
+  toUnit: string
+) {
   if (category === 'Length') {
     return (value * lengthToMeter[fromUnit]) / lengthToMeter[toUnit];
   }
@@ -105,28 +111,22 @@ export default function ConverterScreen() {
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <ThemedText type="subtitle">Unit Converter</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Convert values across length, temperature, weight, and currency.
-          </ThemedText>
+          <ThemedText type="title">Unit Converter</ThemedText>
 
-          <ThemedView type="backgroundElement" style={styles.section}>
-            <ThemedText type="smallBold">Category</ThemedText>
-            <ThemedView style={styles.chipRow}>
-              {(Object.keys(unitOptions) as ConverterCategory[]).map((item) => (
-                <Pressable key={item} onPress={() => handleCategorySelect(item)}>
-                  <ThemedView
-                    type={item === category ? 'backgroundSelected' : 'background'}
-                    style={styles.chip}>
-                    <ThemedText type="small">{item}</ThemedText>
-                  </ThemedView>
-                </Pressable>
-              ))}
-            </ThemedView>
-          </ThemedView>
+          <Dropdown
+            label="Category"
+            items={Object.keys(unitOptions) as ConverterCategory[]}
+            selectedValue={category}
+            onSelect={handleCategorySelect}
+          />
 
-          <ThemedView type="backgroundElement" style={styles.section}>
-            <ThemedText type="smallBold">Value</ThemedText>
+          <ThemedView style={styles.conversionContainer}>
+            <Dropdown
+              label="From"
+              items={currentUnits}
+              selectedValue={fromUnit}
+              onSelect={setFromUnit}
+            />
             <TextInput
               keyboardType="decimal-pad"
               value={inputValue}
@@ -134,39 +134,15 @@ export default function ConverterScreen() {
               placeholder="Enter value"
               style={styles.input}
             />
-
-            <ThemedText type="smallBold">From</ThemedText>
-            <ThemedView style={styles.chipRow}>
-              {currentUnits.map((unit) => (
-                <Pressable key={`from-${unit}`} onPress={() => setFromUnit(unit)}>
-                  <ThemedView
-                    type={fromUnit === unit ? 'backgroundSelected' : 'background'}
-                    style={styles.chip}>
-                    <ThemedText type="small">{unit}</ThemedText>
-                  </ThemedView>
-                </Pressable>
-              ))}
-            </ThemedView>
-
-            <ThemedText type="smallBold">To</ThemedText>
-            <ThemedView style={styles.chipRow}>
-              {currentUnits.map((unit) => (
-                <Pressable key={`to-${unit}`} onPress={() => setToUnit(unit)}>
-                  <ThemedView
-                    type={toUnit === unit ? 'backgroundSelected' : 'background'}
-                    style={styles.chip}>
-                    <ThemedText type="small">{unit}</ThemedText>
-                  </ThemedView>
-                </Pressable>
-              ))}
-            </ThemedView>
           </ThemedView>
 
-          <ThemedView type="backgroundSelected" style={styles.resultCard}>
-            <ThemedText type="smallBold">Result</ThemedText>
-            <ThemedText type="subtitle" style={styles.resultText}>
-              {result}
-            </ThemedText>
+          <ThemedView style={styles.conversionContainer}>
+            <Dropdown label="To" items={currentUnits} selectedValue={toUnit} onSelect={setToUnit} />
+            <ThemedView style={styles.resultCard}>
+              <ThemedText type="subtitle" style={styles.resultText}>
+                {result}
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
         </ScrollView>
       </SafeAreaView>
@@ -177,7 +153,6 @@ export default function ConverterScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    flexDirection: 'row',
   },
   safeArea: {
     flex: 1,
@@ -188,39 +163,35 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    gap: Spacing.three,
+    paddingVertical: Spacing.six,
+    gap: Spacing.four,
   },
-  section: {
-    borderRadius: Spacing.four,
-    padding: Spacing.three,
+  conversionContainer: {
     gap: Spacing.two,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.one,
-  },
-  chip: {
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
+    borderTopWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingTop: Spacing.four,
   },
   input: {
-    borderRadius: Spacing.three,
-    backgroundColor: '#ffffff',
-    color: '#111111',
+    borderRadius: Spacing.two,
+    backgroundColor: '#FFFFFF',
+    color: '#1E3A8A',
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.three,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
   },
   resultCard: {
-    borderRadius: Spacing.four,
+    borderRadius: Spacing.two,
     padding: Spacing.three,
-    gap: Spacing.one,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
   },
   resultText: {
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 24,
+    lineHeight: 32,
+    color: '#1E3A8A',
   },
 });
