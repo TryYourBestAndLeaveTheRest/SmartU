@@ -1,181 +1,180 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import React from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
-  const theme = useTheme();
+type Note = {
+  id: string;
+  text: string;
+  createdAt: string;
+};
 
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
-  });
+const NOTES_STORAGE_KEY = 'smartu_notes';
+
+export default function NotesScreen() {
+  const [draft, setDraft] = useState('');
+  const [notes, setNotes] = useState<Note[]>([]);
+
+  useEffect(() => {
+    void loadNotes();
+  }, []);
+
+  async function loadNotes() {
+    try {
+      const savedNotes = await AsyncStorage.getItem(NOTES_STORAGE_KEY);
+      if (savedNotes) {
+        setNotes(JSON.parse(savedNotes) as Note[]);
+      }
+    } catch (error) {
+      console.warn('Failed to load notes', error);
+    }
+  }
+
+  async function persistNotes(nextNotes: Note[]) {
+    setNotes(nextNotes);
+    await AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(nextNotes));
+  }
+
+  async function addNote() {
+    const text = draft.trim();
+    if (!text) {
+      Alert.alert('Empty note', 'Write something before saving.');
+      return;
+    }
+
+    const nextNotes: Note[] = [
+      {
+        id: `${Date.now()}`,
+        text,
+        createdAt: new Date().toISOString(),
+      },
+      ...notes,
+    ];
+
+    setDraft('');
+    await persistNotes(nextNotes);
+  }
+
+  async function removeNote(id: string) {
+    const nextNotes = notes.filter((note) => note.id !== id);
+    await persistNotes(nextNotes);
+  }
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
+    <ThemedView style={styles.root}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ThemedText type="subtitle">Quick Notes</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Save short notes for reminders, ideas, and to-dos.
           </ThemedText>
 
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
+          <ThemedView type="backgroundElement" style={styles.editorCard}>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Write your note here"
+              multiline
+              style={styles.input}
+            />
+
+            <Pressable style={({ pressed }) => [styles.addButton, pressed && styles.pressed]} onPress={addNote}>
+              <ThemedView type="backgroundSelected" style={styles.addButtonInner}>
+                <ThemedText type="smallBold">Save Note</ThemedText>
               </ThemedView>
             </Pressable>
-          </ExternalLink>
-        </ThemedView>
+          </ThemedView>
 
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
+          <ThemedView style={styles.noteList}>
+            {notes.length === 0 ? (
+              <ThemedView type="backgroundElement" style={styles.emptyState}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  No notes yet. Add your first note above.
+                </ThemedText>
+              </ThemedView>
+            ) : (
+              notes.map((note) => (
+                <ThemedView key={note.id} type="backgroundElement" style={styles.noteCard}>
+                  <ThemedText type="default">{note.text}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {new Date(note.createdAt).toLocaleString()}
+                  </ThemedText>
+                  <Pressable
+                    style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+                    onPress={() => removeNote(note.id)}>
+                    <ThemedText type="smallBold">Delete</ThemedText>
+                  </Pressable>
+                </ThemedView>
+              ))
+            )}
+          </ThemedView>
+        </ScrollView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
+  root: {
     flex: 1,
-  },
-  contentContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
   },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
-  },
-  titleContainer: {
-    gap: Spacing.three,
+  safeArea: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
+    paddingBottom: BottomTabInset,
   },
-  centerText: {
-    textAlign: 'center',
+  content: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+    gap: Spacing.three,
+  },
+  editorCard: {
+    borderRadius: Spacing.four,
+    padding: Spacing.three,
+    gap: Spacing.three,
+  },
+  input: {
+    minHeight: 120,
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    backgroundColor: '#ffffff',
+    color: '#111111',
+    textAlignVertical: 'top',
+    fontSize: 16,
+  },
+  addButton: {
+    alignSelf: 'flex-start',
+    borderRadius: Spacing.three,
+  },
+  addButtonInner: {
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.8,
   },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
+  noteList: {
+    gap: Spacing.two,
   },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
+  emptyState: {
     borderRadius: Spacing.three,
-    marginTop: Spacing.two,
+    padding: Spacing.three,
   },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
+  noteCard: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
+  deleteButton: {
+    alignSelf: 'flex-start',
+    marginTop: Spacing.one,
   },
 });
