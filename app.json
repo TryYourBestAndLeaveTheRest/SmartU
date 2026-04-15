@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.sherifdeen.SmartU"
     },
     "plugins": [
       "expo-router",
@@ -36,6 +37,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b8a737e9-bc34-4e19-8464-622e2a2f5a2f"
+      }
     }
   }
 }
